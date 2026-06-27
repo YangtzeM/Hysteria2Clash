@@ -12,7 +12,7 @@
             <svg-icon class="youguan" icon-class="youtube" style="float:right;margin-left:10px" @click="gotoYouTuBe"/>
             <svg-icon class="channel" icon-class="telegram" style="float:right;margin-left: 10px"
                       @click="gotoTgChannel"/>
-            <div style="text-align:center;font-size:15px">订 阅 转 换</div>
+            <div style="text-align:center;font-size:15px">Hysteria2Clash</div>
           </div>
           <el-container>
             <el-form :model="form" label-width="80px" label-position="left" style="width: 100%">
@@ -344,7 +344,7 @@
             <el-form-item prop="uploadScript">
               <el-input
                   v-model="uploadScript"
-                  placeholder="本功能暂停使用，如有兴趣，自行去我的GitHub参考sub-web-api项目部署！"
+                  placeholder="本功能暂停使用，如有兴趣，可参考订阅转换后端接口自行部署！"
                   type="textarea"
                   :autosize="{ minRows: 15, maxRows: 15}"
                   maxlength="50000"
@@ -370,7 +370,7 @@
             <el-form-item prop="uploadFilter">
               <el-input
                   v-model="uploadFilter"
-                  placeholder="本功能暂停使用，如有兴趣，自行去我的GitHub参考sub-web-api项目部署！"
+                  placeholder="本功能暂停使用，如有兴趣，可参考订阅转换后端接口自行部署！"
                   type="textarea"
                   :autosize="{ minRows: 15, maxRows: 15}"
                   maxlength="50000"
@@ -424,6 +424,8 @@
   </div>
 </template>
 <script>
+import { hasHysteria2Source, normalizeHysteria2SourceForDefaultExport } from "@/utils/hysteria2";
+
 const project = process.env.VUE_APP_PROJECT
 const configScriptBackend = process.env.VUE_APP_CONFIG_UPLOAD_BACKEND + '/api.php'
 const remoteConfigSample = process.env.VUE_APP_SUBCONVERTER_REMOTE_CONFIG
@@ -885,7 +887,7 @@ export default {
         clientType: "",
         customBackend: this.getUrlParam() == "" ? "https://api.v1.mk" : this.getUrlParam(),
         shortType: "https://v1.mk/short",
-        remoteConfig: "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_NoAuto.ini",
+        remoteConfig: "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini.ini",
         excludeRemarks: "",
         includeRemarks: "",
         filename: "",
@@ -937,13 +939,11 @@ export default {
     };
   },
   created() {
-    document.title = "在线订阅转换工具";
+    document.title = "Hysteria2Clash";
     this.isPC = this.$getOS().isPc;
   },
   mounted() {
-    this.tanchuang();
     this.form.clientType = "clash";
-    this.getBackendVersion();
     this.anhei();
     let lightMedia = window.matchMedia('(prefers-color-scheme: light)');
     let darkMedia = window.matchMedia('(prefers-color-scheme: dark)');
@@ -1051,102 +1051,124 @@ export default {
             window.open(advancedVideo);
           });
     },
+    buildSubUrl(overrides = {}) {
+      const form = {
+        ...this.form,
+        ...overrides,
+        tpl: {
+          surge: {
+            ...this.form.tpl.surge,
+            ...((overrides.tpl && overrides.tpl.surge) || {})
+          },
+          clash: {
+            ...this.form.tpl.clash,
+            ...((overrides.tpl && overrides.tpl.clash) || {})
+          },
+          singbox: {
+            ...this.form.tpl.singbox,
+            ...((overrides.tpl && overrides.tpl.singbox) || {})
+          }
+        }
+      };
+      let backend =
+          form.customBackend === ""
+              ? defaultBackend
+              : form.customBackend;
+      const containsHysteria2 = hasHysteria2Source(form.sourceSubUrl);
+      let sourceSub = normalizeHysteria2SourceForDefaultExport(form.sourceSubUrl);
+      let customSubUrl =
+          backend +
+          "/sub?target=" +
+          form.clientType +
+          "&url=" +
+          encodeURIComponent(sourceSub) +
+          "&insert=" +
+          form.insert;
+      if (form.remoteConfig !== "") {
+        customSubUrl +=
+            "&config=" + encodeURIComponent(form.remoteConfig);
+      }
+      if (form.excludeRemarks !== "") {
+        customSubUrl +=
+            "&exclude=" + encodeURIComponent(form.excludeRemarks);
+      }
+      if (form.includeRemarks !== "") {
+        customSubUrl +=
+            "&include=" + encodeURIComponent(form.includeRemarks);
+      }
+      if (form.filename !== "") {
+        customSubUrl +=
+            "&filename=" + encodeURIComponent(form.filename);
+      }
+      if (form.rename !== "") {
+        customSubUrl +=
+            "&rename=" + encodeURIComponent(form.rename);
+      }
+      if (form.interval !== "") {
+        customSubUrl +=
+            "&interval=" + encodeURIComponent(form.interval * 86400);
+      }
+      if (form.devid !== "") {
+        customSubUrl +=
+            "&dev_id=" + encodeURIComponent(form.devid);
+      }
+      if (form.appendType) {
+        customSubUrl +=
+            "&append_type=" + form.appendType.toString();
+      }
+      if (form.tls13) {
+        customSubUrl +=
+            "&tls13=" + form.tls13.toString();
+      }
+      if (form.sort) {
+        customSubUrl +=
+            "&sort=" + form.sort.toString();
+      }
+      customSubUrl +=
+          "&emoji=" +
+          form.emoji.toString() +
+          "&list=" +
+          form.nodeList.toString() +
+          "&xudp=" +
+          form.xudp.toString() +
+          "&udp=" +
+          (containsHysteria2 || form.udp).toString() +
+          "&tfo=" +
+          form.tfo.toString() +
+          "&expand=" +
+          form.expand.toString() +
+          "&scv=" +
+          (containsHysteria2 || form.scv).toString() +
+          "&fdn=" +
+          form.fdn.toString();
+      if (form.clientType.includes("surge")) {
+        if (form.tpl.surge.doh === true) {
+          customSubUrl += "&surge.doh=true";
+        }
+      }
+      if (form.clientType === "clash") {
+        if (form.tpl.clash.doh === true) {
+          customSubUrl += "&clash.doh=true";
+        }
+        customSubUrl += "&new_name=" + form.new_name.toString();
+      }
+      if (form.clientType === "singbox") {
+        if (form.tpl.singbox.ipv6 === true) {
+          customSubUrl += "&singbox.ipv6=1";
+        }
+      }
+      if (form.diyua.trim() !== "") {
+        customSubUrl +=
+            "&diyua=" + encodeURIComponent(form.diyua);
+      }
+      return customSubUrl;
+    },
     makeUrl() {
       if (this.form.sourceSubUrl === "" || this.form.clientType === "") {
         this.$message.error("订阅链接与客户端为必填项");
         return false;
       }
-      let backend =
-          this.form.customBackend === ""
-              ? defaultBackend
-              : this.form.customBackend;
-      let sourceSub = this.form.sourceSubUrl;
-      sourceSub = sourceSub.replace(/(\n|\r|\n\r)/g, "|");
-      this.customSubUrl =
-          backend +
-          "/sub?target=" +
-          this.form.clientType +
-          "&url=" +
-          encodeURIComponent(sourceSub) +
-          "&insert=" +
-          this.form.insert;
-      if (this.form.remoteConfig !== "") {
-        this.customSubUrl +=
-            "&config=" + encodeURIComponent(this.form.remoteConfig);
-      }
-      if (this.form.excludeRemarks !== "") {
-        this.customSubUrl +=
-            "&exclude=" + encodeURIComponent(this.form.excludeRemarks);
-      }
-      if (this.form.includeRemarks !== "") {
-        this.customSubUrl +=
-            "&include=" + encodeURIComponent(this.form.includeRemarks);
-      }
-      if (this.form.filename !== "") {
-        this.customSubUrl +=
-            "&filename=" + encodeURIComponent(this.form.filename);
-      }
-      if (this.form.rename !== "") {
-        this.customSubUrl +=
-            "&rename=" + encodeURIComponent(this.form.rename);
-      }
-      if (this.form.interval !== "") {
-        this.customSubUrl +=
-            "&interval=" + encodeURIComponent(this.form.interval * 86400);
-      }
-      if (this.form.devid !== "") {
-        this.customSubUrl +=
-            "&dev_id=" + encodeURIComponent(this.form.devid);
-      }
-      if (this.form.appendType) {
-        this.customSubUrl +=
-            "&append_type=" + this.form.appendType.toString();
-      }
-      if (this.form.tls13) {
-        this.customSubUrl +=
-            "&tls13=" + this.form.tls13.toString();
-      }
-      if (this.form.sort) {
-        this.customSubUrl +=
-            "&sort=" + this.form.sort.toString();
-      }
-      this.customSubUrl +=
-          "&emoji=" +
-          this.form.emoji.toString() +
-          "&list=" +
-          this.form.nodeList.toString() +
-          "&xudp=" +
-          this.form.xudp.toString() +
-          "&udp=" +
-          this.form.udp.toString() +
-          "&tfo=" +
-          this.form.tfo.toString() +
-          "&expand=" +
-          this.form.expand.toString() +
-          "&scv=" +
-          this.form.scv.toString() +
-          "&fdn=" +
-          this.form.fdn.toString();    
-      if (this.form.clientType.includes("surge")) {
-        if (this.form.tpl.surge.doh === true) {
-          this.customSubUrl += "&surge.doh=true";
-        }
-      }
-      if (this.form.clientType === "clash") {
-        if (this.form.tpl.clash.doh === true) {
-          this.customSubUrl += "&clash.doh=true";
-        }
-        this.customSubUrl += "&new_name=" + this.form.new_name.toString();
-      }
-      if (this.form.clientType === "singbox") {
-        if (this.form.tpl.singbox.ipv6 === true) {
-          this.customSubUrl += "&singbox.ipv6=1";
-        }
-      }
-      if (this.form.diyua.trim() !== "") {
-        this.customSubUrl +=
-            "&diyua=" + encodeURIComponent(this.form.diyua);
-      }
+      this.customSubUrl = this.buildSubUrl();
       this.$copyText(this.customSubUrl);
       this.$message.success("定制订阅已复制到剪贴板");
     },
@@ -1341,8 +1363,9 @@ export default {
     },
     renderPost() {
       let data = new FormData();
+      const containsHysteria2 = hasHysteria2Source(this.form.sourceSubUrl);
       data.append("target", encodeURIComponent(this.form.clientType));
-      data.append("url", encodeURIComponent(this.form.sourceSubUrl));
+      data.append("url", encodeURIComponent(normalizeHysteria2SourceForDefaultExport(this.form.sourceSubUrl)));
       data.append("config", encodeURIComponent(this.form.remoteConfig));
       data.append("exclude", encodeURIComponent(this.form.excludeRemarks));
       data.append("include", encodeURIComponent(this.form.includeRemarks));
@@ -1351,10 +1374,10 @@ export default {
       data.append("xudp", encodeURIComponent(this.form.xudp.toString()));
       data.append("emoji", encodeURIComponent(this.form.emoji.toString()));
       data.append("list", encodeURIComponent(this.form.nodeList.toString()));
-      data.append("udp", encodeURIComponent(this.form.udp.toString()));
+      data.append("udp", encodeURIComponent((containsHysteria2 || this.form.udp).toString()));
       data.append("tfo", encodeURIComponent(this.form.tfo.toString()));
       data.append("expand", encodeURIComponent(this.form.expand.toString()));
-      data.append("scv", encodeURIComponent(this.form.scv.toString()));
+      data.append("scv", encodeURIComponent((containsHysteria2 || this.form.scv).toString()));
       data.append("fdn", encodeURIComponent(this.form.fdn.toString()));
       data.append("sdoh", encodeURIComponent(this.form.tpl.surge.doh.toString()));
       data.append("cdoh", encodeURIComponent(this.form.tpl.clash.doh.toString()));
